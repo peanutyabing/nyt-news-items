@@ -44,7 +44,31 @@ class NYTimesSource(object):
                  dictionaries with the defined rows.
         """
         # TODO: implement - this dummy implementation returns one batch of data
-       
+        all_articles = []
+        batch = []
+        page = 0
+
+        while True:
+            url = '%sjson?q=%s&page=%s&api-key=%s' % (
+                API_ROOT, config["query"], page, config["api_key"])
+            res = requests.get(url)
+
+            if res.status_code == 200:
+                pageResList = res.json()["response"]["docs"]
+
+                for article in pageResList:
+                    flattened_article = self.flatten_dict(article)
+                    if len(batch) < batch_size:
+                        batch.append(flattened_article)
+                    else:
+                        all_articles.append(batch)
+                        batch = []
+                page += 1
+
+            else:
+                break
+
+        return all_articles
 
     def _flatten_dict_gen(self, d, parent_key, seperator):
         for key, val in d.items():
