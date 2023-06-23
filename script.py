@@ -1,10 +1,13 @@
 import argparse
 import logging
+from collections.abc import MutableMapping
 import os
 from dotenv import load_dotenv
+import requests
 
 load_dotenv()
 
+API_ROOT = "https://api.nytimes.com/svc/search/v2/articlesearch."
 API_KEY = os.environ.get("API_KEY")
 
 """
@@ -33,7 +36,7 @@ class NYTimesSource(object):
         # Nothing to do
         pass
 
-    def getDataBatch(self, batch_size):
+    def getDataBatch(self, batch_size, config):
         """
         Generator - Get data from source on batches.
 
@@ -41,12 +44,18 @@ class NYTimesSource(object):
                  dictionaries with the defined rows.
         """
         # TODO: implement - this dummy implementation returns one batch of data
-        yield [
-            {
-                "headline.main": "The main headline",
-                "_id": "1234",
-            }
-        ]
+       
+
+    def _flatten_dict_gen(self, d, parent_key, seperator):
+        for key, val in d.items():
+            new_key = parent_key + seperator + key if parent_key else key
+            if isinstance(val, MutableMapping):
+                yield from self.flatten_dict(val, new_key, seperator=seperator).items()
+            else:
+                yield new_key, val
+
+    def flatten_dict(self, d: MutableMapping, parent_key: str = "", seperator: str = "."):
+        return dict(self._flatten_dict_gen(d, parent_key, seperator))
 
     def getSchema(self):
         """
@@ -77,9 +86,9 @@ if __name__ == "__main__":
 
     # This looks like an argparse dependency - but the Namespace class is just
     # a simple way to create an object holding attributes.
-    source.args = argparse.Namespace(**config)
+    # source.args = argparse.Namespace(**config)
 
-    for idx, batch in enumerate(source.getDataBatch(10)):
+    for idx, batch in enumerate(source.getDataBatch(10, config)):
         print(f"{idx} Batch of {len(batch)} items")
         for item in batch:
             print(f"  - {item['_id']} - {item['headline.main']}")
